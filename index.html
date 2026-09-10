@@ -244,14 +244,6 @@
       </div>
 
       <div class="card">
-        <h2>🚛 Relatório para Last Mile</h2>
-        <p style="font-size:13px;color:var(--text-dim);margin:0 0 14px;">Baixa um relatório com os veículos vencidos e perto de vencer na Revisão Geral, pronto pra mandar pro Last Mile (semi-reboques sempre por último).</p>
-        <button class="btn" id="btn-baixar-lastmile-pdf">Baixar PDF</button>
-        <button class="btn secondary" id="btn-baixar-lastmile" style="margin-top:10px;">Baixar Excel</button>
-        <div class="msg" id="msg-lastmile"></div>
-      </div>
-
-      <div class="card">
         <h2>Lançar revisão geral</h2>
         <label for="g-placa">Placa</label>
         <input id="g-placa" type="text" placeholder="Ex: ABC1D23" autocapitalize="characters" maxlength="8">
@@ -295,6 +287,22 @@
           <div class="stat late"><div class="num">–</div><div class="lbl">Vencido</div></div>
         </div>
         <div style="margin-top:16px;" id="adm-bars"></div>
+      </div>
+
+      <div class="card">
+        <h2>📋 Relatório de Filtros</h2>
+        <p style="font-size:13px;color:var(--text-dim);margin:0 0 14px;">Baixa um relatório com os veículos vencidos e perto de vencer no Filtro Intermediário (semi-reboques sempre por último).</p>
+        <button class="btn" id="btn-baixar-filtros-pdf">Baixar PDF</button>
+        <button class="btn secondary" id="btn-baixar-filtros" style="margin-top:10px;">Baixar Excel</button>
+        <div class="msg" id="msg-filtros-relatorio"></div>
+      </div>
+
+      <div class="card">
+        <h2>🚛 Relatório para Last Mile</h2>
+        <p style="font-size:13px;color:var(--text-dim);margin:0 0 14px;">Baixa um relatório com os veículos vencidos e perto de vencer na Revisão Geral, pronto pra mandar pro Last Mile (semi-reboques sempre por último).</p>
+        <button class="btn" id="btn-baixar-lastmile-pdf">Baixar PDF</button>
+        <button class="btn secondary" id="btn-baixar-lastmile" style="margin-top:10px;">Baixar Excel</button>
+        <div class="msg" id="msg-lastmile"></div>
       </div>
 
       <div class="card">
@@ -703,136 +711,153 @@ async function carregarRelatorio(apiPath, statsElId, barsElId){
 function loadRelatorio(){ return carregarRelatorio('/api/relatorio', 'adm-stats', 'adm-bars'); }
 function loadRelatorioGeral(){ return carregarRelatorio('/api/relatorio-geral', 'adm-stats-geral', 'adm-bars-geral'); }
 
-// ---------- ADM: relatório pra Last Mile (Revisão Geral) — Excel e PDF ----------
-async function obterItensLastMile(){
-  const resp = await api('/api/status-geral');
-  const itens = (resp.frota || []).filter(v => v.status === 'VENCIDO' || v.perto);
-  // semi-reboque sempre por último; dentro de cada grupo, vencido antes de perto de vencer
-  itens.sort((a,b) => {
-    const aSemi = (a.modelo || '').toUpperCase() === 'SEMI-REBOQUE' ? 1 : 0;
-    const bSemi = (b.modelo || '').toUpperCase() === 'SEMI-REBOQUE' ? 1 : 0;
-    if(aSemi !== bSemi) return aSemi - bSemi;
-    const aVencido = a.status === 'VENCIDO' ? 0 : 1;
-    const bVencido = b.status === 'VENCIDO' ? 0 : 1;
-    return aVencido - bVencido;
+// ---------- ADM: relatórios (Filtros e Revisão Geral) — Excel e PDF ----------
+function criarRelatorioDownload(apiPath, msgElId, btnPdfId, btnExcelId, tituloRelatorio, arquivoPrefixo){
+  async function obterItens(){
+    const resp = await api(apiPath);
+    const itens = (resp.frota || []).filter(v => v.status === 'VENCIDO' || v.perto);
+    // semi-reboque sempre por último; dentro de cada grupo, vencido antes de perto de vencer
+    itens.sort((a,b) => {
+      const aSemi = (a.modelo || '').toUpperCase() === 'SEMI-REBOQUE' ? 1 : 0;
+      const bSemi = (b.modelo || '').toUpperCase() === 'SEMI-REBOQUE' ? 1 : 0;
+      if(aSemi !== bSemi) return aSemi - bSemi;
+      const aVencido = a.status === 'VENCIDO' ? 0 : 1;
+      const bVencido = b.status === 'VENCIDO' ? 0 : 1;
+      return aVencido - bVencido;
+    });
+    return itens;
+  }
+
+  document.getElementById(btnExcelId).addEventListener('click', async ()=>{
+    const msg = document.getElementById(msgElId);
+    const btn = document.getElementById(btnExcelId);
+    btn.disabled = true; btn.textContent = 'Gerando…';
+    try{
+      const itens = await obterItens();
+      if(!itens.length){
+        showMsg(msg, 'Nenhum veículo vencido ou perto de vencer agora.', true);
+        return;
+      }
+      const linhas = itens.map(v => ({
+        Placa: v.placa,
+        Modelo: v.modelo || '',
+        Situação: v.status === 'VENCIDO' ? 'VENCIDO' : 'PERTO DE VENCER',
+        'KM Atual': v.kmAtual,
+        'KM Faltante': v.faltam,
+        'Última Data': v.ultimaData || '',
+      }));
+      const ws = XLSX.utils.json_to_sheet(linhas);
+      ws['!cols'] = [{wch:12},{wch:16},{wch:16},{wch:12},{wch:12},{wch:16}];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Relatorio');
+      const hoje = new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb, `jt-express-${arquivoPrefixo}-${hoje}.xlsx`);
+      showMsg(msg, 'Excel baixado.', true);
+    }catch(e){
+      showMsg(msg, 'Não deu pra gerar: ' + e.message, false);
+    }finally{
+      btn.disabled = false; btn.textContent = 'Baixar Excel';
+    }
   });
-  return itens;
+
+  document.getElementById(btnPdfId).addEventListener('click', async ()=>{
+    const msg = document.getElementById(msgElId);
+    const btn = document.getElementById(btnPdfId);
+    btn.disabled = true; btn.textContent = 'Gerando…';
+    try{
+      const itens = await obterItens();
+      if(!itens.length){
+        showMsg(msg, 'Nenhum veículo vencido ou perto de vencer agora.', true);
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const corAccent = [176, 51, 74]; // vermelho bordô da marca
+
+      doc.addImage(LOGO_JT_BASE64, 'JPEG', 14, 10, 32, 18.5);
+
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('J&T EXPRESS', 52, 16);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Manutenção Preventiva de Frota', 52, 23);
+
+      doc.setDrawColor(...corAccent);
+      doc.setLineWidth(0.6);
+      doc.line(14, 33, 196, 33);
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(20, 20, 20);
+      doc.text(tituloRelatorio, 14, 40);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Gerado em ' + new Date().toLocaleDateString('pt-BR'), 14, 46);
+
+      const linhas = itens.map(v => [
+        v.placa,
+        v.modelo || '',
+        v.status === 'VENCIDO' ? 'VENCIDO' : 'PERTO DE VENCER',
+        fmtNum(v.kmAtual),
+        v.status === 'VENCIDO' ? '-' + fmtNum(Math.abs(v.faltam)) : fmtNum(v.faltam),
+        v.ultimaData || '-',
+      ]);
+
+      doc.autoTable({
+        startY: 52,
+        head: [['Placa', 'Modelo', 'Situação', 'KM Atual', 'KM Faltante', 'Última Data']],
+        body: linhas,
+        headStyles: { fillColor: corAccent, textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 3 },
+        alternateRowStyles: { fillColor: [248, 240, 241] },
+        didParseCell: function(dados){
+          if(dados.section === 'body' && dados.column.index === 2){
+            if(dados.cell.raw === 'VENCIDO'){
+              dados.cell.styles.textColor = [190, 30, 30];
+              dados.cell.styles.fontStyle = 'bold';
+            } else {
+              dados.cell.styles.textColor = [170, 110, 10];
+            }
+          }
+        },
+      });
+
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('J&T Express — Manutenção Preventiva de Frota', 14, doc.internal.pageSize.height - 10);
+
+      const hoje = new Date().toISOString().slice(0,10);
+      doc.save(`jt-express-${arquivoPrefixo}-${hoje}.pdf`);
+      showMsg(msg, 'PDF baixado.', true);
+    }catch(e){
+      showMsg(msg, 'Não deu pra gerar: ' + e.message, false);
+    }finally{
+      btn.disabled = false; btn.textContent = 'Baixar PDF';
+    }
+  });
 }
 
-document.getElementById('btn-baixar-lastmile').addEventListener('click', async ()=>{
-  const msg = document.getElementById('msg-lastmile');
-  const btn = document.getElementById('btn-baixar-lastmile');
-  btn.disabled = true; btn.textContent = 'Gerando…';
-  try{
-    const itens = await obterItensLastMile();
-    if(!itens.length){
-      showMsg(msg, 'Nenhum veículo vencido ou perto de vencer agora.', true);
-      return;
-    }
+criarRelatorioDownload(
+  '/api/status',
+  'msg-filtros-relatorio',
+  'btn-baixar-filtros-pdf',
+  'btn-baixar-filtros',
+  'Filtro Intermediário — Veículos Vencidos e Perto de Vencer',
+  'vencidos-filtros'
+);
 
-    const linhas = itens.map(v => ({
-      Placa: v.placa,
-      Modelo: v.modelo || '',
-      Situação: v.status === 'VENCIDO' ? 'VENCIDO' : 'PERTO DE VENCER',
-      'KM Atual': v.kmAtual,
-      'KM Faltante': v.faltam,
-      'Última Revisão': v.ultimaData || '',
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(linhas);
-    ws['!cols'] = [{wch:12},{wch:16},{wch:16},{wch:12},{wch:12},{wch:16}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Last Mile');
-    const hoje = new Date().toISOString().slice(0,10);
-    XLSX.writeFile(wb, `jt-express-vencidos-revisao-geral-${hoje}.xlsx`);
-    showMsg(msg, 'Excel baixado.', true);
-  }catch(e){
-    showMsg(msg, 'Não deu pra gerar: ' + e.message, false);
-  }finally{
-    btn.disabled = false; btn.textContent = 'Baixar Excel';
-  }
-});
-
-document.getElementById('btn-baixar-lastmile-pdf').addEventListener('click', async ()=>{
-  const msg = document.getElementById('msg-lastmile');
-  const btn = document.getElementById('btn-baixar-lastmile-pdf');
-  btn.disabled = true; btn.textContent = 'Gerando…';
-  try{
-    const itens = await obterItensLastMile();
-    if(!itens.length){
-      showMsg(msg, 'Nenhum veículo vencido ou perto de vencer agora.', true);
-      return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const corAccent = [176, 51, 74]; // vermelho bordô da marca
-
-    // Logo J&T Express
-    doc.addImage(LOGO_JT_BASE64, 'JPEG', 14, 10, 32, 18.5);
-
-    doc.setTextColor(20, 20, 20);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('J&T EXPRESS', 52, 16);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Manutenção Preventiva de Frota', 52, 23);
-
-    doc.setDrawColor(...corAccent);
-    doc.setLineWidth(0.6);
-    doc.line(14, 33, 196, 33);
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(20, 20, 20);
-    doc.text('Revisão Geral — Veículos Vencidos e Perto de Vencer', 14, 40);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Gerado em ' + new Date().toLocaleDateString('pt-BR'), 14, 46);
-
-    const linhas = itens.map(v => [
-      v.placa,
-      v.modelo || '',
-      v.status === 'VENCIDO' ? 'VENCIDO' : 'PERTO DE VENCER',
-      fmtNum(v.kmAtual),
-      v.status === 'VENCIDO' ? '-' + fmtNum(Math.abs(v.faltam)) : fmtNum(v.faltam),
-      v.ultimaData || '-',
-    ]);
-
-    doc.autoTable({
-      startY: 52,
-      head: [['Placa', 'Modelo', 'Situação', 'KM Atual', 'KM Faltante', 'Última Revisão']],
-      body: linhas,
-      headStyles: { fillColor: corAccent, textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 3 },
-      alternateRowStyles: { fillColor: [248, 240, 241] },
-      didParseCell: function(dados){
-        if(dados.section === 'body' && dados.column.index === 2){
-          if(dados.cell.raw === 'VENCIDO'){
-            dados.cell.styles.textColor = [190, 30, 30];
-            dados.cell.styles.fontStyle = 'bold';
-          } else {
-            dados.cell.styles.textColor = [170, 110, 10];
-          }
-        }
-      },
-    });
-
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text('J&T Express — Manutenção Preventiva de Frota', 14, doc.internal.pageSize.height - 10);
-
-    const hoje = new Date().toISOString().slice(0,10);
-    doc.save(`jt-express-vencidos-revisao-geral-${hoje}.pdf`);
-    showMsg(msg, 'PDF baixado.', true);
-  }catch(e){
-    showMsg(msg, 'Não deu pra gerar: ' + e.message, false);
-  }finally{
-    btn.disabled = false; btn.textContent = 'Baixar PDF';
-  }
-});
+criarRelatorioDownload(
+  '/api/status-geral',
+  'msg-lastmile',
+  'btn-baixar-lastmile-pdf',
+  'btn-baixar-lastmile',
+  'Revisão Geral — Veículos Vencidos e Perto de Vencer',
+  'vencidos-revisao-geral'
+);
 
 // ---------- ADM: atualizar KM (atualiza as duas preventivas) ----------
 document.getElementById('btn-atualizar-km').addEventListener('click', async ()=>{
