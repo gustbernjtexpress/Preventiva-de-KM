@@ -191,91 +191,47 @@
     <!-- ---- conteúdo liberado pela senha de MANUTENÇÃO ---- -->
     <div id="frota-manutencao" style="display:none;">
 
-    <div class="subpanel active" id="sub-mt-filtros">
-
-    <div class="card">
-      <h2>Lançar preventiva (Filtro)</h2>
-      <label for="m-placa">Placa</label>
-      <input id="m-placa" type="text" placeholder="Ex: ABC1D23" autocapitalize="characters" maxlength="8">
-      <label for="m-tipo-veiculo">Modelo do veículo</label>
-      <select id="m-tipo-veiculo">
-        <option value="ATEGO 1933SCE">ATEGO 1933SCE</option>
-        <option value="ACTROSS 2045">ACTROSS 2045</option>
-        <option value="VM360">VM360</option>
-        <option value="VM 290 6X2 R">VM 290 6X2 R</option>
-        <option value="VOLVO FH">VOLVO FH</option>
-        <option value="SEMI-REBOQUE">SEMI-REBOQUE</option>
-      </select>
-      <p style="font-size:12px;color:var(--text-dim);margin:-8px 0 14px;">Filtro intermediário: 25.000 km, igual pra qualquer modelo.</p>
-      <label for="m-data">Data</label>
-      <input id="m-data" type="date">
-      <label for="m-km">KM da troca</label>
-      <input id="m-km" type="number" inputmode="numeric" placeholder="Ex: 152300">
-      <label for="m-tipo">Tipo de troca</label>
-      <input id="m-tipo" type="text" placeholder="Ex: TROCA DE ÓLEO" style="text-transform:uppercase;">
-      <button class="btn" id="btn-lancar">Lançar</button>
-      <div class="msg" id="msg-lancar"></div>
-    </div>
-
-    <div class="card">
-      <h2>Status da frota (Filtros)</h2>
-      <input id="fleet-search" type="text" placeholder="Buscar placa..." autocapitalize="characters" style="margin-bottom:12px;">
-      <div id="fleet-list"><div class="empty">Carregando…</div></div>
-      <div class="refresh-link" id="refresh-fleet">atualizar lista</div>
-    </div>
-
-    </div>
-
-    <div class="refresh-link" id="frota-sair-manutencao">sair</div>
-
-    </div>
-
-    <!-- ---- conteúdo liberado pela senha de ADM ---- -->
-    <div id="frota-adm" style="display:none;">
-
       <div class="subtabs">
-        <div class="subtab active" data-subtab="adm-filtros">Filtros</div>
-        <div class="subtab" data-subtab="adm-geral">Revisão Geral</div>
+        <div class="subtab active" data-subtab="mt-filtros">Filtros</div>
+        <div class="subtab" data-subtab="mt-geral">Revisão Geral</div>
       </div>
 
-      <div class="subpanel active" id="sub-adm-filtros">
-      <div class="card">
-        <h2>Resumo (Filtros)</h2>
-        <div class="stat-grid" id="adm-stats">
-          <div class="stat ok"><div class="num">–</div><div class="lbl">Em dia</div></div>
-          <div class="stat warn"><div class="num">–</div><div class="lbl">Perto</div></div>
-          <div class="stat late"><div class="num">–</div><div class="lbl">Vencido</div></div>
-        </div>
-        <div style="margin-top:16px;" id="adm-bars"></div>
-      </div>
+      <div class="subpanel active" id="sub-mt-filtros">
 
       <div class="card">
-        <h2>Atualizar KM atual</h2>
-        <p style="font-size:13px;color:var(--text-dim);margin:0 0 10px;">Atualiza a placa nas duas preventivas (Filtros e Revisão Geral) de uma vez.</p>
-        <label for="a-placa">Placa</label>
-        <input id="a-placa" type="text" placeholder="Ex: ABC1D23" autocapitalize="characters" maxlength="8">
-        <label for="a-km">KM atual</label>
-        <input id="a-km" type="number" inputmode="numeric" placeholder="Ex: 158900">
-        <button class="btn" id="btn-atualizar-km">Atualizar</button>
-        <div class="msg" id="msg-atualizar-km"></div>
+        <h2>Lançar preventiva (Filtro)</h2>
+        <label for="m-placa">Placa</label>
+        <input id="m-placa" type="text" placeholder="Ex: ABC1D23" autocapitalize="characters" maxlength="8">
+        <label for="m-tipo-veiculo">Modelo do veículo</label>
+        <select id="m-tipo-veiculo">
+          <option value="ATEGO 1933SCE">ATEGO 1933SCE</option>
+          <option value="ACTROSS 2045">ACTROSS 2045</option>
+          <option value="VM360">VM360</option>
+          <option value="VM 290 6X2 R">VM 290 6X2 R</option>
+          <option value="VOLVO FH">VOLVO FH</option>
+          <option value="SEMI-REBOQUE">SEMI-REBOQUE</option>
+        </select>
+        <p style="font-size:12px;color:var(--text-dim);margin:-8px 0 14px;">Filtro intermediário: 25.000 km, igual pra qualquer modelo.</p>
+        <label for="m-data">Data</label>
+        <input id="m-data" type="date">
+        <label for="m-km">KM da troca</label>
+        <input id="m-km" type="number" inputmode="numeric" placeholder="Ex: 152300">
+        <label for="m-tipo">Tipo de troca</label>
+        <input id="m-tipo" type="text" placeholder="Ex: TROCA DE ÓLEO" style="text-transform:uppercase;">
+        <button class="btn" id="btn-lancar">Lançar</button>
+        <div class="msg" id="msg-lancar"></div>
       </div>
 
       <div class="card">
-        <h2>Importar KM do Omnilink</h2>
-        <p style="font-size:13px;color:#666;margin:0 0 10px;">Suba o relatório do Omnilink (Excel ou CSV). Atualiza as duas preventivas de uma vez. Veículo desligado (KM zerado) não apaga o KM que já está salvo — só atualiza quando vier um valor real, e sempre usando só a parte inteira do Hodômetro (antes da vírgula).</p>
-        <input type="file" id="om-file" accept=".csv,.xlsx,.xls">
-        <div id="om-preview" style="display:none; margin-top:12px;">
-          <label for="om-col-placa">Qual coluna é a Placa?</label>
-          <select id="om-col-placa"></select>
-          <label for="om-col-km">Qual coluna é o KM/Hodômetro?</label>
-          <select id="om-col-km"></select>
-          <button class="btn" id="btn-om-importar" style="margin-top:10px;">Importar</button>
-        </div>
-        <div class="msg" id="msg-om-importar"></div>
-      </div>
+        <h2>Status da frota (Filtros)</h2>
+        <input id="fleet-search" type="text" placeholder="Buscar placa..." autocapitalize="characters" style="margin-bottom:12px;">
+        <div id="fleet-list"><div class="empty">Carregando…</div></div>
+        <div class="refresh-link" id="refresh-fleet">atualizar lista</div>
       </div>
 
-      <div class="subpanel" id="sub-adm-geral" style="display:none;">
+      </div>
+
+      <div class="subpanel" id="sub-mt-geral" style="display:none;">
 
       <div class="card">
         <h2>Resumo (Revisão Geral)</h2>
@@ -322,6 +278,48 @@
         <div class="refresh-link" id="refresh-fleet-geral">atualizar lista</div>
       </div>
 
+      </div>
+
+      <div class="refresh-link" id="frota-sair-manutencao">sair</div>
+
+    </div>
+
+    <!-- ---- conteúdo liberado pela senha de ADM ---- -->
+    <div id="frota-adm" style="display:none;">
+
+      <div class="card">
+        <h2>Resumo (Filtros)</h2>
+        <div class="stat-grid" id="adm-stats">
+          <div class="stat ok"><div class="num">–</div><div class="lbl">Em dia</div></div>
+          <div class="stat warn"><div class="num">–</div><div class="lbl">Perto</div></div>
+          <div class="stat late"><div class="num">–</div><div class="lbl">Vencido</div></div>
+        </div>
+        <div style="margin-top:16px;" id="adm-bars"></div>
+      </div>
+
+      <div class="card">
+        <h2>Atualizar KM atual</h2>
+        <p style="font-size:13px;color:var(--text-dim);margin:0 0 10px;">Atualiza a placa nas duas preventivas (Filtros e Revisão Geral) de uma vez.</p>
+        <label for="a-placa">Placa</label>
+        <input id="a-placa" type="text" placeholder="Ex: ABC1D23" autocapitalize="characters" maxlength="8">
+        <label for="a-km">KM atual</label>
+        <input id="a-km" type="number" inputmode="numeric" placeholder="Ex: 158900">
+        <button class="btn" id="btn-atualizar-km">Atualizar</button>
+        <div class="msg" id="msg-atualizar-km"></div>
+      </div>
+
+      <div class="card">
+        <h2>Importar KM do Omnilink</h2>
+        <p style="font-size:13px;color:#666;margin:0 0 10px;">Suba o relatório do Omnilink (Excel ou CSV). Atualiza as duas preventivas de uma vez. Veículo desligado (KM zerado) não apaga o KM que já está salvo — só atualiza quando vier um valor real, e sempre usando só a parte inteira do Hodômetro (antes da vírgula).</p>
+        <input type="file" id="om-file" accept=".csv,.xlsx,.xls">
+        <div id="om-preview" style="display:none; margin-top:12px;">
+          <label for="om-col-placa">Qual coluna é a Placa?</label>
+          <select id="om-col-placa"></select>
+          <label for="om-col-km">Qual coluna é o KM/Hodômetro?</label>
+          <select id="om-col-km"></select>
+          <button class="btn" id="btn-om-importar" style="margin-top:10px;">Importar</button>
+        </div>
+        <div class="msg" id="msg-om-importar"></div>
       </div>
 
       <div class="refresh-link" id="frota-sair-adm">sair</div>
@@ -674,7 +672,7 @@ document.querySelectorAll('.subtab').forEach(st=>{
     const alvo = document.getElementById('sub-'+st.dataset.subtab);
     alvo.classList.add('active');
     alvo.style.display = 'block';
-    if(st.dataset.subtab === 'adm-geral'){ loadRelatorioGeral(); loadFleetGeral(); }
+    if(st.dataset.subtab === 'mt-geral'){ loadRelatorioGeral(); loadFleetGeral(); }
   });
 });
 
