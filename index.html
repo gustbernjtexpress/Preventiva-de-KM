@@ -30,6 +30,76 @@
   }
   .wrap{max-width:520px; margin:0 auto; padding:0 0 48px;}
 
+  /* ===================== Modo desktop (ADM, aberto no PC) ===================== */
+  body.adm-desktop .wrap{ max-width:1180px; padding:0 0 60px; }
+
+  .adm-desktop-header{
+    display:none;
+    align-items:center; justify-content:space-between;
+    padding:22px 4px 18px; margin-bottom:6px; border-bottom:1px solid var(--line);
+  }
+  body.adm-desktop .adm-desktop-header{ display:flex; }
+  .adm-desktop-header .title{
+    font-family:'Space Grotesk', sans-serif; font-size:20px; font-weight:600;
+  }
+  .adm-desktop-header .title span{
+    display:block; font-family:'JetBrains Mono', monospace; font-size:11px;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:4px; font-weight:600;
+  }
+  .adm-desktop-header .sair-desktop{
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:.04em;
+    color:var(--text-dim); cursor:pointer; text-decoration:underline; text-transform:uppercase;
+  }
+
+  body.adm-desktop #frota-adm{
+    display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:18px; align-items:start;
+  }
+  body.adm-desktop #frota-adm .card{ margin-bottom:0; padding:22px 24px; }
+  body.adm-desktop #frota-adm .card h2{ font-size:16px; margin-bottom:16px; }
+  body.adm-desktop #frota-adm > .refresh-link{ display:none; } /* substituído pelo "sair" do cabeçalho desktop */
+
+  /* Resumo ocupa a largura toda e vira uma faixa de estatísticas maior */
+  body.adm-desktop #frota-adm > .card-resumo-filtros{
+    grid-column:1 / -1; padding:20px 26px;
+  }
+  body.adm-desktop #frota-adm > .card-resumo-filtros .stat-grid{
+    grid-template-columns:repeat(3, minmax(140px, 220px));
+    justify-content:flex-start; gap:20px;
+  }
+  body.adm-desktop #frota-adm > .card-resumo-filtros .stat{ padding:18px 14px; }
+  body.adm-desktop #frota-adm > .card-resumo-filtros .stat .num{ font-size:30px; }
+  body.adm-desktop #frota-adm > .card-resumo-filtros > div[style*="margin-top:16px"]{
+    max-width:640px;
+  }
+
+  /* Os 2 cards de relatório (Filtros / Last Mile) lado a lado, botões também lado a lado */
+  body.adm-desktop #frota-adm .btn{ margin-top:14px; }
+  body.adm-desktop #frota-adm .card:has(#btn-baixar-filtros-pdf),
+  body.adm-desktop #frota-adm .card:has(#btn-baixar-lastmile-pdf){
+    display:flex; flex-direction:column;
+  }
+  body.adm-desktop #frota-adm .card:has(#btn-baixar-filtros-pdf) > div:last-of-type,
+  body.adm-desktop #frota-adm .card:has(#btn-baixar-lastmile-pdf) > div:last-of-type{
+    margin-top:auto;
+  }
+  body.adm-desktop #frota-adm #btn-baixar-filtros-pdf,
+  body.adm-desktop #frota-adm #btn-baixar-filtros,
+  body.adm-desktop #frota-adm #btn-baixar-lastmile-pdf,
+  body.adm-desktop #frota-adm #btn-baixar-lastmile{
+    display:inline-block; width:calc(50% - 6px); margin-right:10px; vertical-align:top;
+  }
+  body.adm-desktop #frota-adm #btn-baixar-filtros,
+  body.adm-desktop #frota-adm #btn-baixar-lastmile{ margin-right:0; }
+
+  /* Importar Omnilink ocupa a largura toda, já que tem mais campos */
+  body.adm-desktop #frota-adm .card:has(#om-file){ grid-column:1 / -1; }
+  body.adm-desktop #frota-adm .card:has(#om-file) #om-preview{
+    display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end;
+  }
+  body.adm-desktop #frota-adm .card:has(#om-file) #om-preview label{ margin:0 0 6px; }
+  body.adm-desktop #frota-adm .card:has(#om-file) #btn-om-importar{ margin-top:0; }
+
   header.top{
     padding:28px 20px 20px;
     border-bottom:1px solid var(--line);
@@ -279,7 +349,12 @@
     <!-- ---- conteúdo liberado pela senha de ADM ---- -->
     <div id="frota-adm" style="display:none;">
 
-      <div class="card">
+      <div class="adm-desktop-header">
+        <div class="title"><span>J&amp;T · Painel</span>Gestão da Frota</div>
+        <div class="sair-desktop" id="frota-sair-adm-desktop">sair</div>
+      </div>
+
+      <div class="card card-resumo-filtros">
         <h2>Resumo (Filtros)</h2>
         <div class="stat-grid" id="adm-stats">
           <div class="stat ok"><div class="num">–</div><div class="lbl">Em dia</div></div>
@@ -401,6 +476,7 @@ async function frotaLogin(){
     frotaSenha = senha;
     frotaRole = r.role;
     document.getElementById('frota-login').style.display = 'none';
+    document.body.classList.toggle('adm-desktop', frotaRole === 'adm');
     if(frotaRole === 'manutencao'){
       document.getElementById('frota-manutencao').style.display = 'block';
       loadFleet();
@@ -425,9 +501,11 @@ function frotaSair(){
   document.getElementById('frota-manutencao').style.display = 'none';
   document.getElementById('frota-adm').style.display = 'none';
   document.getElementById('frota-login').style.display = 'block';
+  document.body.classList.remove('adm-desktop');
 }
 document.getElementById('frota-sair-manutencao').addEventListener('click', frotaSair);
 document.getElementById('frota-sair-adm').addEventListener('click', frotaSair);
+document.getElementById('frota-sair-adm-desktop').addEventListener('click', frotaSair);
 
 // ---------- Helpers ----------
 function showMsg(el, text, ok){
