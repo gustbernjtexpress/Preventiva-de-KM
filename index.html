@@ -232,23 +232,11 @@
   </header>
 
   <div class="tabs">
-    <div class="tab active" data-tab="motoristas">Motoristas</div>
-    <div class="tab" data-tab="frota">Frota</div>
+    <div class="tab active" data-tab="frota">Frota</div>
   </div>
 
-  <!-- ===================== ÁREA MOTORISTAS (sem senha) ===================== -->
-  <section class="panel active" id="panel-motoristas">
-    <div class="card">
-      <h2>Consultar placa</h2>
-      <label for="mot-placa">Placa</label>
-      <input id="mot-placa" type="text" placeholder="Ex: ABC1D23" autocapitalize="characters" maxlength="8">
-      <button class="btn" id="btn-mot-buscar">Buscar</button>
-      <div id="mot-resultado" style="margin-top:14px;"></div>
-    </div>
-  </section>
-
   <!-- ===================== ÁREA FROTA (pede senha) ===================== -->
-  <section class="panel" id="panel-frota">
+  <section class="panel active" id="panel-frota">
 
     <div class="card login-box" id="frota-login">
       <h2 style="justify-content:center">Área da frota</h2>
@@ -434,35 +422,6 @@ document.querySelectorAll('.tab').forEach(tab=>{
     document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
   });
 });
-
-// ---------- Motoristas: buscar placa (sem senha) ----------
-async function buscarPlacaMotorista(){
-  const placa = document.getElementById('mot-placa').value.trim().toUpperCase();
-  const box = document.getElementById('mot-resultado');
-  if(!placa){ box.innerHTML = ''; return; }
-  box.innerHTML = '<div class="empty">Buscando…</div>';
-  try{
-    const data = await api('/api/status');
-    const v = (data.frota || []).find(f => f.placa === placa);
-    if(!v){
-      box.innerHTML = '<div class="empty">Placa não encontrada.</div>';
-      return;
-    }
-    const cls = statusClass(v);
-    const label = v.status === 'VENCIDO' ? 'VENCIDO' : (v.perto ? 'EM DIA · perto de vencer' : 'EM DIA');
-    box.innerHTML = `<div class="fleet-row ${cls}">
-      <div>
-        <div class="placa">${v.placa}</div>
-        <div class="fleet-meta"><span class="dot ${cls}"></span>${label}</div>
-      </div>
-      <div class="faltam">${v.faltam >= 0 ? fmtNum(v.faltam)+' km' : 'vencida'}</div>
-    </div>`;
-  }catch(e){
-    box.innerHTML = '<div class="empty">Não deu pra buscar: ' + e.message + '</div>';
-  }
-}
-document.getElementById('btn-mot-buscar').addEventListener('click', buscarPlacaMotorista);
-document.getElementById('mot-placa').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') buscarPlacaMotorista(); });
 
 // ---------- Frota: login (manutenção ou ADM) ----------
 async function frotaLogin(){
