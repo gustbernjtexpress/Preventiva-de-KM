@@ -52,12 +52,13 @@
   }
 
   body.adm-desktop #frota-adm{
-    display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+    display:grid !important; grid-template-columns:repeat(2, minmax(0,1fr));
     gap:18px; align-items:start;
   }
   body.adm-desktop #frota-adm .card{ margin-bottom:0; padding:22px 24px; }
   body.adm-desktop #frota-adm .card h2{ font-size:16px; margin-bottom:16px; }
   body.adm-desktop #frota-adm > .refresh-link{ display:none; } /* substituído pelo "sair" do cabeçalho desktop */
+  body.adm-desktop #frota-adm > .adm-desktop-header{ grid-column:1 / -1; }
 
   /* Resumo ocupa a largura toda e vira uma faixa de estatísticas maior */
   body.adm-desktop #frota-adm > .card-resumo-filtros{
