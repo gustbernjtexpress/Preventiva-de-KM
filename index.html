@@ -32,13 +32,13 @@ button.pri{background:var(--red);border-color:var(--red);color:#fff}
 .bar{display:flex;gap:8px;margin-bottom:10px}
 .bar input{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:7px 10px}
 .tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
-table{width:100%;border-collapse:collapse;min-width:900px;table-layout:fixed}
+table{width:100%;border-collapse:collapse;min-width:990px;table-layout:fixed}
 tbody tr:not(.open) td.t,tbody tr:not(.open) td.s,tbody tr:not(.open) .ob,.sit span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tbody tr:not(.open) .ex{display:none}
 .sit{min-width:0}.sit span{min-width:0}tr.open .sit{white-space:normal}tr.open .sit span{white-space:normal}
 .zh{margin:1px 0 0 22px;font-size:13px;color:var(--zh);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}tr.open .zh{white-space:normal}
 .hz{display:block;text-transform:none;letter-spacing:0;font-weight:500;font-size:12px;margin-top:2px;color:var(--zh)}.zh0{color:var(--zh)}.z0{margin-left:0}.pv .zh{margin:0;font-size:12px}
-.cap .tools,.cap .bar{display:none}.cap .act,.cap th:nth-child(6),.cap td:nth-child(6){display:none}.cap th{position:static}.cap .tw{overflow:visible}
+.cap .tools,.cap .bar{display:none}.cap .act,.cap th:nth-child(7),.cap td:nth-child(7){display:none}.cap th{position:static}.cap .tw{overflow:visible}
 [hidden]{display:none!important}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -58,7 +58,7 @@ th{position:sticky;top:0;background:#fff;color:var(--ink);border-bottom:2px soli
 td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
 tbody tr:nth-child(even) td{background:rgba(127,127,127,.06)}
 tbody tr:hover td{background:rgba(215,25,32,.07)}
-th:nth-child(1){width:110px}th:nth-child(2){width:210px}th:nth-child(3){width:200px}th:nth-child(4){width:auto}th:nth-child(5){width:120px}th:nth-child(6){width:235px}
+th:nth-child(1){width:110px}th:nth-child(2){width:84px}th:nth-child(3){width:210px}th:nth-child(4){width:200px}th:nth-child(5){width:auto}th:nth-child(6){width:120px}th:nth-child(7){width:235px}td.dt{white-space:nowrap;color:var(--mut)}.dd{margin-left:8px;font-size:12px;color:var(--mut);font-weight:400}
 @media (min-width:1100px){body{font-size:15px}td,th{padding:8px 14px}.tw{overflow:visible}table{min-width:0}}
 td.v{font-weight:700}
 td.t{color:var(--mut);font-size:12px;text-transform:uppercase}
@@ -82,7 +82,7 @@ dialog input,dialog select,dialog textarea{width:100%;border:1px solid var(--lin
 header{padding:8px 12px}.logo{font-size:24px}h1{font-size:18px}.sub input{border:0;padding:0;width:auto}
 .sum{gap:6px;margin:8px 0}.box{padding:6px 8px}.box b{font-size:20px}.total b{font-size:24px}
 table{min-width:0}th,td{padding:5px 8px}thead{display:table-header-group}tr{break-inside:avoid}
-th:nth-child(6),td:nth-child(6){display:none}
+th:nth-child(7),td:nth-child(7){display:none}
 .tw{overflow:visible}th{position:static}tbody tr:hover td{background:none}
 .cards{grid-template-columns:repeat(3,1fr);gap:6px}.card{break-inside:avoid;padding:6px 8px}.card .ob,.card .cb .zh{display:block!important;overflow:visible!important}.card .ex{display:block!important}.ca{display:none}
 .zh,.ob,.sit span,td.t,td.s{white-space:normal!important;overflow:visible!important;text-overflow:clip!important}.ex{display:block!important}.act button{display:none}}
@@ -116,6 +116,7 @@ th:nth-child(6),td:nth-child(6){display:none}
 
 <dialog id="dlg"><div>
   <label>Veículo (placa)</label><input id="f_v">
+  <label>Data do sinistro</label><input type="date" id="f_d">
   <label>Tipo</label><input id="f_t" placeholder="Ex.: COLISÃO COM TERCEIRO">
   <label>Tipo em mandarim (opcional, se ficar vazio traduz sozinho)</label><input id="f_tz" placeholder="Ex.: 与第三方碰撞">
   <label>Categoria (resumo)</label><select id="f_c"></select>
@@ -151,7 +152,8 @@ const ZL=(pt,z)=>lang==="pt"?{main:pt,sub:""}:lang==="zh"?{main:z||pt,sub:""}:{m
 const zj=(pt,z)=>lang==="pt"?pt:lang==="zh"?z:pt+' · <span class="zh0">'+z+'</span>';
 const pair=(pt,z)=>{const m=ZL(pt,z);return esc(m.main)+(m.sub?`<div class="zh z0">${esc(m.sub)}</div>`:"")};
 const obHtml=i=>{const m=ZL(i.o,oz(i));return `<div class="ob">${esc(m.main)}</div>${m.sub?`<div class="zh z0">${esc(m.sub)}</div>`:""}`};
-const H=[["Veículo","车辆"],["Tipo","类型"],["Situação","状态"],["Tratativa / Observações","处理情况 / 备注"],["Previsão","预计日期"]];
+const H=[["Veículo","车辆"],["Data","事故日期"],["Tipo","类型"],["Situação","状态"],["Tratativa / Observações","处理情况 / 备注"],["Previsão","预计日期"]];
+const dshort=d=>d?d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(2,4):"—";
 const fmt=d=>d.split("-").reverse().join("/");
 function prev(d){
   if(!d)return '<span style="color:var(--mut)">—</span>';
@@ -193,18 +195,18 @@ function render(){setTimeout(labelAll,0);setTimeout(autoTr,50);
   const q=$("q").value.toLowerCase();
   const rows=S.items.filter(i=>(filter?i.c===filter:(q||i.c!=="fin"))&&(!q||[i.v,i.t,i.s,i.co,i.o,i.e].join(" ").toLowerCase().includes(q)));
   $("tb").innerHTML=view!=="table"?"":rows.length?rows.map(i=>`<tr class="${exp.has(i.id)?"open":""}">
-    <td class="v">${esc(i.v)}</td><td class="t" title="${esc(i.t)}">${pair(i.t,tz(i))}</td>
+    <td class="v">${esc(i.v)}</td><td class="dt">${dshort(i.d)}</td><td class="t" title="${esc(i.t)}">${pair(i.t,tz(i))}</td>
     <td class="s"><div class="sit"><i class="dot" style="background:${cat(i.c).c}"></i>${(m=>`<span title="${esc(m.main)}">${esc(m.main)}</span></div>${m.sub?`<div class="zh">${esc(m.sub)}</div>`:""}`)(ZL(sit(i),zh(i)))}</td>
     <td>${obHtml(i)}${i.e?`<div class="ex">${esc(i.e)}</div>`:""}</td>
     <td>${prev(i.p)}</td>
-    <td class="act"><button data-x="${i.id}">${exp.has(i.id)?"Ver menos":"Ver mais"}</button> <button data-e="${i.id}">Editar</button> <button data-d="${i.id}">✕</button></td></tr>`).join(""):`<tr><td colspan="6" class="empty">${S.items.length?"Nenhum sinistro encontrado.":"Nenhum sinistro cadastrado. Clique em “+ Novo sinistro”."}</td></tr>`;
+    <td class="act"><button data-x="${i.id}">${exp.has(i.id)?"Ver menos":"Ver mais"}</button> <button data-e="${i.id}">Editar</button> <button data-d="${i.id}">✕</button></td></tr>`).join(""):`<tr><td colspan="7" class="empty">${S.items.length?"Nenhum sinistro encontrado.":"Nenhum sinistro cadastrado. Clique em “+ Novo sinistro”."}</td></tr>`;
   $("hr").innerHTML=H.map(([a,b])=>{const m=ZL(a,b);return `<th>${esc(m.main)}${m.sub?`<span class="hz">${esc(m.sub)}</span>`:""}</th>`}).join("")+'<th class="act"></th>';
   document.querySelectorAll("[data-l]").forEach(b=>b.classList.toggle("on2",b.dataset.l===lang));
   $("tw").hidden=view!=="table";$("cards").hidden=view!=="cards";
   $("vc").classList.toggle("on2",view==="cards");$("vt").classList.toggle("on2",view==="table");
   $("cards").innerHTML=view!=="cards"?"":rows.length?rows.map(i=>{const o=exp.has(i.id),z=zh(i),t2=tz(i),o2=oz(i),c=cat(i.c);
     return `<div class="card ${o?"open":""}" style="border-top-color:${c.c}">
-    <div class="ch"><b>${esc(i.v)}</b><div class="cp">${prev(i.p)}</div></div>
+    <div class="ch"><div><b>${esc(i.v)}</b>${i.d?`<span class="dd">${dshort(i.d)}</span>`:""}</div><div class="cp">${prev(i.p)}</div></div>
     <div class="ct">${pair(i.t,t2)}</div>
     <div class="cs"><i class="dot" style="background:${c.c}"></i>${(m=>`<span>${esc(m.main)}</span>${m.sub?`<span class="zh z0">· ${esc(m.sub)}</span>`:""}`)(ZL(sit(i),z))}</div>
     <div class="cb">${obHtml(i)}${i.e?`<div class="ex">${esc(i.e)}</div>`:""}</div>
@@ -215,15 +217,15 @@ function render(){setTimeout(labelAll,0);setTimeout(autoTr,50);
 }
 function labelAll(){$("all").textContent=exp.size>=S.items.length?"Recolher tudo":"Expandir tudo"}
 function open(id){
-  editId=id;const i=S.items.find(x=>x.id===id)||{v:"",t:"",c:"terc",s:"",o:"",e:""};
-  $("f_v").value=i.v;$("f_t").value=i.t;$("f_c").value=i.c;$("f_co").value=i.co||"";tgl();$("f_s").value=i.s;$("f_z").value=i.z||"";$("f_tz").value=i.tz||"";$("f_oz").value=i.oz||"";$("f_o").value=i.o;$("f_e").value=i.e;$("f_p").value=i.p||"";
+  editId=id;const i=S.items.find(x=>x.id===id)||{v:"",d:new Date().toISOString().slice(0,10),t:"",c:"terc",s:"",o:"",e:""};
+  $("f_v").value=i.v;$("f_d").value=i.d||"";$("f_t").value=i.t;$("f_c").value=i.c;$("f_co").value=i.co||"";tgl();$("f_s").value=i.s;$("f_z").value=i.z||"";$("f_tz").value=i.tz||"";$("f_oz").value=i.oz||"";$("f_o").value=i.o;$("f_e").value=i.e;$("f_p").value=i.p||"";
   $("dlg").showModal();
 }
 $("add").onclick=()=>open(null);
 $("tr").onclick=()=>window.open("https://translate.google.com/?sl=pt&tl=zh-CN&op=translate&text="+encodeURIComponent($("f_o").value),"_blank","noopener");
 $("cx").onclick=()=>$("dlg").close();
 $("ok").onclick=()=>{
-  const d={v:$("f_v").value.trim().toUpperCase(),t:$("f_t").value.trim(),c:$("f_c").value,s:$("f_s").value.trim(),o:$("f_o").value.trim(),e:$("f_e").value.trim(),p:$("f_p").value,z:$("f_z").value.trim(),tz:$("f_tz").value.trim(),oz:$("f_oz").value.trim(),co:$("f_c").value==="out"?$("f_co").value.trim():""};
+  const d={v:$("f_v").value.trim().toUpperCase(),d:$("f_d").value,t:$("f_t").value.trim(),c:$("f_c").value,s:$("f_s").value.trim(),o:$("f_o").value.trim(),e:$("f_e").value.trim(),p:$("f_p").value,z:$("f_z").value.trim(),tz:$("f_tz").value.trim(),oz:$("f_oz").value.trim(),co:$("f_c").value==="out"?$("f_co").value.trim():""};
   if(!d.v){$("f_v").focus();return}
   if(d.c==="out"&&!d.co){$("f_co").focus();return}
   if(d.c==="fin"&&!d.s)d.s="Finalizado";
