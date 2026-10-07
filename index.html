@@ -53,6 +53,10 @@ tbody tr:not(.open) .ex{display:none}
 .ca button{padding:2px 8px;font-size:12px}.ca button[data-x]{color:var(--red);border-color:var(--red)}
 button.on2{background:var(--red);border-color:var(--red);color:#fff}
 .cap .ca{display:none}
+.opb{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-top:3px}
+.opb.ok{background:rgba(46,158,79,.15);color:#1f7a3a}.opb.no{background:rgba(215,25,32,.12);color:var(--red)}.card .opb{margin:0 0 0 8px}
+.fbar{flex-wrap:wrap;align-items:center;font-size:13px;color:var(--mut)}.fbar label{display:flex;align-items:center;gap:6px}
+.fbar select,.fbar input[type=date]{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:5px 8px}.fn{margin-left:auto}
 .act button[data-x]{color:var(--red);border-color:var(--red)}
 th{position:sticky;top:0;background:#fff;color:var(--ink);border-bottom:2px solid var(--red);text-align:left;padding:10px 12px;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
 td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
@@ -107,6 +111,14 @@ th:nth-child(7),td:nth-child(7){display:none}
 <div class="sum" id="sum"></div>
 
 <div class="bar"><input id="q" placeholder="Buscar placa, tipo ou observação…"><span id="trn" style="font-size:12px;color:var(--red);align-self:center"></span><button id="vc">▦ Cards</button><button id="vt">☰ Tabela</button><button id="all">Expandir tudo</button></div>
+<div class="bar fbar">
+  <label>Categoria <select id="fc"></select></label>
+  <label>Operante <select id="fo"><option value="">Todos</option><option value="sim">Operante</option><option value="nao">Parado</option></select></label>
+  <label>Data do sinistro <input type="date" id="fd"> até <input type="date" id="fa"></label>
+  <button id="fx">Limpar filtros</button>
+  <span id="fn" class="fn"></span>
+  <button id="xl" class="pri">📊 Exportar Excel</button>
+</div>
 <div class="tw" id="tw"><table>
   <thead><tr id="hr"></tr></thead>
   <tbody id="tb"></tbody>
@@ -116,6 +128,7 @@ th:nth-child(7),td:nth-child(7){display:none}
 
 <dialog id="dlg"><div>
   <label>Veículo (placa)</label><input id="f_v">
+  <label>Veículo operante?</label><select id="f_op"><option value="">Não informado</option><option value="sim">Operante</option><option value="nao">Parado (inoperante)</option></select>
   <label>Data do sinistro</label><input type="date" id="f_d">
   <label>Tipo</label><input id="f_t" placeholder="Ex.: COLISÃO COM TERCEIRO">
   <label>Tipo em mandarim (opcional, se ficar vazio traduz sozinho)</label><input id="f_tz" placeholder="Ex.: 与第三方碰撞">
@@ -132,6 +145,7 @@ th:nth-child(7),td:nth-child(7){display:none}
 </div></dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const CATS=[
  {id:"terc",n:"Aguardando retorno de terceiros",c:"var(--y)"},
@@ -145,7 +159,7 @@ const SEED=[];
 const KEY="sinistros-v1";
 let S={date:new Date().toISOString().slice(0,10),items:SEED.map((x,i)=>({...x,id:i+1}))};
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
-let filter=null,editId=null;const exp=new Set();let lang="pt";try{lang=localStorage.getItem("sinistros-lang")||"pt"}catch(e){}if(lang==="both")lang="pt";let view="cards";try{view=localStorage.getItem("sinistros-view")||"cards"}catch(e){}
+let filter=null,editId=null,curRows=[];const F={op:"",de:"",ate:""};const exp=new Set();let lang="pt";try{lang=localStorage.getItem("sinistros-lang")||"pt"}catch(e){}if(lang==="both")lang="pt";let view="cards";try{view=localStorage.getItem("sinistros-view")||"cards"}catch(e){}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ZL=(pt,z)=>lang==="pt"?{main:pt,sub:""}:lang==="zh"?{main:z||pt,sub:""}:{main:pt,sub:z||""};
@@ -154,6 +168,7 @@ const pair=(pt,z)=>{const m=ZL(pt,z);return esc(m.main)+(m.sub?`<div class="zh z
 const obHtml=i=>{const m=ZL(i.o,oz(i));return `<div class="ob">${esc(m.main)}</div>${m.sub?`<div class="zh z0">${esc(m.sub)}</div>`:""}`};
 const H=[["Veículo","车辆"],["Data","事故日期"],["Tipo","类型"],["Situação","状态"],["Tratativa / Observações","处理情况 / 备注"],["Previsão","预计日期"]];
 const dshort=d=>d?d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(2,4):"—";
+const opb=(i,t="div")=>i.op==="sim"?`<${t} class="opb ok">${ZL("Operante","可运行").main}</${t}>`:i.op==="nao"?`<${t} class="opb no">${ZL("Parado","停运").main}</${t}>`:"";
 const fmt=d=>d.split("-").reverse().join("/");
 function prev(d){
   if(!d)return '<span style="color:var(--mut)">—</span>';
@@ -193,20 +208,21 @@ function render(){setTimeout(labelAll,0);setTimeout(autoTr,50);
     return `<div class="box ${filter===c.id?"on":""}" data-c="${c.id}" style="border-top-color:${c.c}"><i class="dot" style="background:${c.c}"></i><div><b>${String(k).padStart(2,"0")}</b><br>${(m=>`<span>${m.main}</span>${m.sub?`<br><span class="zh0">${m.sub}</span>`:""}`)(ZL(c.n,CZ[c.id]))}</div></div>`}).join("");
   document.querySelectorAll(".box[data-c]").forEach(b=>b.onclick=()=>{filter=filter===b.dataset.c?null:b.dataset.c;render()});
   const q=$("q").value.toLowerCase();
-  const rows=S.items.filter(i=>(filter?i.c===filter:(q||i.c!=="fin"))&&(!q||[i.v,i.t,i.s,i.co,i.o,i.e].join(" ").toLowerCase().includes(q)));
+  const rows=curRows=S.items.filter(i=>(filter==="__all"?true:filter?i.c===filter:(q||i.c!=="fin"))&&(!F.op||i.op===F.op)&&(!F.de||(i.d&&i.d>=F.de))&&(!F.ate||(i.d&&i.d<=F.ate))&&(!q||[i.v,i.t,i.s,i.co,i.o,i.e].join(" ").toLowerCase().includes(q)));
   $("tb").innerHTML=view!=="table"?"":rows.length?rows.map(i=>`<tr class="${exp.has(i.id)?"open":""}">
-    <td class="v">${esc(i.v)}</td><td class="dt">${dshort(i.d)}</td><td class="t" title="${esc(i.t)}">${pair(i.t,tz(i))}</td>
+    <td class="v">${esc(i.v)}${opb(i)}</td><td class="dt">${dshort(i.d)}</td><td class="t" title="${esc(i.t)}">${pair(i.t,tz(i))}</td>
     <td class="s"><div class="sit"><i class="dot" style="background:${cat(i.c).c}"></i>${(m=>`<span title="${esc(m.main)}">${esc(m.main)}</span></div>${m.sub?`<div class="zh">${esc(m.sub)}</div>`:""}`)(ZL(sit(i),zh(i)))}</td>
     <td>${obHtml(i)}${i.e?`<div class="ex">${esc(i.e)}</div>`:""}</td>
     <td>${prev(i.p)}</td>
     <td class="act"><button data-x="${i.id}">${exp.has(i.id)?"Ver menos":"Ver mais"}</button> <button data-e="${i.id}">Editar</button> <button data-d="${i.id}">✕</button></td></tr>`).join(""):`<tr><td colspan="7" class="empty">${S.items.length?"Nenhum sinistro encontrado.":"Nenhum sinistro cadastrado. Clique em “+ Novo sinistro”."}</td></tr>`;
   $("hr").innerHTML=H.map(([a,b])=>{const m=ZL(a,b);return `<th>${esc(m.main)}${m.sub?`<span class="hz">${esc(m.sub)}</span>`:""}</th>`}).join("")+'<th class="act"></th>';
   document.querySelectorAll("[data-l]").forEach(b=>b.classList.toggle("on2",b.dataset.l===lang));
+  $("fc").value=filter||"";$("fn").textContent="Mostrando "+rows.length+" de "+S.items.length;$("xl").textContent="📊 Exportar Excel ("+rows.length+")";
   $("tw").hidden=view!=="table";$("cards").hidden=view!=="cards";
   $("vc").classList.toggle("on2",view==="cards");$("vt").classList.toggle("on2",view==="table");
   $("cards").innerHTML=view!=="cards"?"":rows.length?rows.map(i=>{const o=exp.has(i.id),z=zh(i),t2=tz(i),o2=oz(i),c=cat(i.c);
     return `<div class="card ${o?"open":""}" style="border-top-color:${c.c}">
-    <div class="ch"><div><b>${esc(i.v)}</b>${i.d?`<span class="dd">${dshort(i.d)}</span>`:""}</div><div class="cp">${prev(i.p)}</div></div>
+    <div class="ch"><div><b>${esc(i.v)}</b>${i.d?`<span class="dd">${dshort(i.d)}</span>`:""}${opb(i,"span")}</div><div class="cp">${prev(i.p)}</div></div>
     <div class="ct">${pair(i.t,t2)}</div>
     <div class="cs"><i class="dot" style="background:${c.c}"></i>${(m=>`<span>${esc(m.main)}</span>${m.sub?`<span class="zh z0">· ${esc(m.sub)}</span>`:""}`)(ZL(sit(i),z))}</div>
     <div class="cb">${obHtml(i)}${i.e?`<div class="ex">${esc(i.e)}</div>`:""}</div>
@@ -218,14 +234,14 @@ function render(){setTimeout(labelAll,0);setTimeout(autoTr,50);
 function labelAll(){$("all").textContent=exp.size>=S.items.length?"Recolher tudo":"Expandir tudo"}
 function open(id){
   editId=id;const i=S.items.find(x=>x.id===id)||{v:"",d:new Date().toISOString().slice(0,10),t:"",c:"terc",s:"",o:"",e:""};
-  $("f_v").value=i.v;$("f_d").value=i.d||"";$("f_t").value=i.t;$("f_c").value=i.c;$("f_co").value=i.co||"";tgl();$("f_s").value=i.s;$("f_z").value=i.z||"";$("f_tz").value=i.tz||"";$("f_oz").value=i.oz||"";$("f_o").value=i.o;$("f_e").value=i.e;$("f_p").value=i.p||"";
+  $("f_v").value=i.v;$("f_op").value=i.op||"";$("f_d").value=i.d||"";$("f_t").value=i.t;$("f_c").value=i.c;$("f_co").value=i.co||"";tgl();$("f_s").value=i.s;$("f_z").value=i.z||"";$("f_tz").value=i.tz||"";$("f_oz").value=i.oz||"";$("f_o").value=i.o;$("f_e").value=i.e;$("f_p").value=i.p||"";
   $("dlg").showModal();
 }
 $("add").onclick=()=>open(null);
 $("tr").onclick=()=>window.open("https://translate.google.com/?sl=pt&tl=zh-CN&op=translate&text="+encodeURIComponent($("f_o").value),"_blank","noopener");
 $("cx").onclick=()=>$("dlg").close();
 $("ok").onclick=()=>{
-  const d={v:$("f_v").value.trim().toUpperCase(),d:$("f_d").value,t:$("f_t").value.trim(),c:$("f_c").value,s:$("f_s").value.trim(),o:$("f_o").value.trim(),e:$("f_e").value.trim(),p:$("f_p").value,z:$("f_z").value.trim(),tz:$("f_tz").value.trim(),oz:$("f_oz").value.trim(),co:$("f_c").value==="out"?$("f_co").value.trim():""};
+  const d={v:$("f_v").value.trim().toUpperCase(),d:$("f_d").value,op:$("f_op").value,t:$("f_t").value.trim(),c:$("f_c").value,s:$("f_s").value.trim(),o:$("f_o").value.trim(),e:$("f_e").value.trim(),p:$("f_p").value,z:$("f_z").value.trim(),tz:$("f_tz").value.trim(),oz:$("f_oz").value.trim(),co:$("f_c").value==="out"?$("f_co").value.trim():""};
   if(!d.v){$("f_v").focus();return}
   if(d.c==="out"&&!d.co){$("f_co").focus();return}
   if(d.c==="fin"&&!d.s)d.s="Finalizado";
@@ -236,6 +252,28 @@ $("ok").onclick=()=>{
 $("q").oninput=render;
 const setView=v=>{view=v;try{localStorage.setItem("sinistros-view",v)}catch(e){}render()};
 document.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{lang=b.dataset.l;try{localStorage.setItem("sinistros-lang",lang)}catch(e){}render()});
+$("fc").innerHTML='<option value="">Em acompanhamento (todas)</option>'+CATS.map(c=>`<option value="${c.id}">${c.n}</option>`).join("")+'<option value="__all">Todas (inclui finalizados)</option>';
+$("fc").onchange=()=>{filter=$("fc").value||null;render()};
+$("fo").onchange=()=>{F.op=$("fo").value;render()};
+$("fd").onchange=()=>{F.de=$("fd").value;render()};
+$("fa").onchange=()=>{F.ate=$("fa").value;render()};
+$("fx").onclick=()=>{filter=null;F.op=F.de=F.ate="";$("fo").value=$("fd").value=$("fa").value=$("q").value="";render()};
+$("xl").onclick=()=>{
+  if(!window.XLSX){alert("Não foi possível carregar o gerador de Excel (verifique a internet).");return}
+  if(!curRows.length){alert("Nenhum sinistro para exportar com os filtros atuais.");return}
+  const zhOn=lang==="zh";
+  const ser=d=>d?Math.round((Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))-Date.UTC(1899,11,30))/864e5):null;
+  const head=["Placa","Veículo operante","Data do sinistro","Tipo","Categoria","Situação","Tratativa / Observações","Detalhes","Previsão"].concat(zhOn?["Tipo (中文)","Situação (中文)","Tratativa (中文)"]:[]);
+  const data=curRows.map(i=>[i.v,i.op==="sim"?"Operante":i.op==="nao"?"Parado":"",ser(i.d),i.t,cat(i.c).n+(i.c==="out"&&i.co?": "+i.co:""),sit(i),i.o,i.e||"",ser(i.p)].concat(zhOn?[tz(i),zh(i),oz(i)]:[]));
+  const ws=XLSX.utils.aoa_to_sheet([head,...data]);
+  data.forEach((_,r)=>[2,8].forEach(c=>{const a=XLSX.utils.encode_cell({r:r+1,c});if(ws[a]){ws[a].t="n";ws[a].z="dd/mm/yyyy"}}));
+  ws["!cols"]=[10,14,14,30,28,22,60,36,12,28,22,50].slice(0,head.length).map(w=>({wch:w}));
+  ws["!autofilter"]={ref:ws["!ref"]};
+  const catN=filter==="__all"?"Todas (inclui finalizados)":filter?cat(filter).n:"Em acompanhamento (sem finalizados)";
+  const info=[["Gerado em",new Date().toLocaleString("pt-BR")],["Categoria",catN],["Veículo operante",F.op==="sim"?"Operante":F.op==="nao"?"Parado":"Todos"],["Data do sinistro de",F.de?fmt(F.de):"—"],["Data do sinistro até",F.ate?fmt(F.ate):"—"],["Busca",$("q").value||"—"],["Total exportado",curRows.length]];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Sinistros");XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),"Filtros");
+  XLSX.writeFile(wb,"Sinistros - "+new Date().toISOString().slice(0,10).split("-").reverse().join("-")+".xlsx");
+};
 $("vc").onclick=()=>setView("cards");$("vt").onclick=()=>setView("table");
 $("all").onclick=()=>{const ids=S.items.map(i=>i.id);if(exp.size<ids.length)ids.forEach(x=>exp.add(x));else exp.clear();render()};
 $("img").onclick=async()=>{
