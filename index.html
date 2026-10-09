@@ -57,6 +57,8 @@ button.on2{background:var(--red);border-color:var(--red);color:#fff}
 .opb.ok{background:rgba(46,158,79,.15);color:#1f7a3a}.opb.no{background:rgba(215,25,32,.12);color:var(--red)}.card .opb{margin:0 0 0 8px}
 .fbar{flex-wrap:wrap;align-items:center;font-size:13px;color:var(--mut)}.fbar label{display:flex;align-items:center;gap:6px}
 .fbar select,.fbar input[type=date]{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:5px 8px}.fn{margin-left:auto}
+.ro #add,.ro #bkb,.ro #bk,.ro .act,.ro th:nth-child(7),.ro td:nth-child(7),.ro .ca{display:none}
+.cu{display:block;font-size:11px;color:var(--mut);margin-top:2px}.card .cu{display:inline;margin-left:8px}
 .act button[data-x]{color:var(--red);border-color:var(--red)}
 th{position:sticky;top:0;background:#fff;color:var(--ink);border-bottom:2px solid var(--red);text-align:left;padding:10px 12px;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
 td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
@@ -98,13 +100,13 @@ th:nth-child(7),td:nth-child(7){display:none}
   <div class="logo">J&amp;T <small>EXPRESS</small></div>
   <div>
     <h1>ANDAMENTO DE SINISTROS</h1>
-    <div class="sub">Atualizado em <input type="date" id="dt"><span id="bk" style="font-size:12px;margin-left:10px"></span></div>
+    <div class="sub">Atualizado em <input type="date" id="dt"><span id="bk" style="font-size:12px;margin-left:10px"></span><span id="sync" style="font-size:12px;margin-left:10px;color:var(--red)"></span></div>
   </div>
   <div class="tools">
     <span style="align-self:center;color:var(--mut);font-size:12px">Idioma:</span><button data-l="pt">Português</button><button data-l="zh">中文</button>
     <button class="pri" id="add">+ Novo sinistro</button>
     <button id="img">📷 Baixar imagem</button>
-    <button id="bkb">💾 Salvar backup</button>
+    <button id="bkb">💾 Salvar backup</button><button id="cu">👁 Culpa: oculta</button><button id="lg" hidden>🔑 Entrar como editor</button>
   </div>
 </header>
 
@@ -129,6 +131,7 @@ th:nth-child(7),td:nth-child(7){display:none}
 <dialog id="dlg"><div>
   <label>Veículo (placa)</label><input id="f_v">
   <label>Veículo operante?</label><select id="f_op"><option value="">Não informado</option><option value="sim">Operante</option><option value="nao">Parado (inoperante)</option></select>
+  <label>De quem é a culpa? (interno: quem só visualiza nunca vê)</label><select id="f_cu"><option value="">Não informado</option><option value="ter">Terceiros</option><option value="nos">Nós (J&amp;T)</option><option value="out">Outra / compartilhada</option></select>
   <label>Data do sinistro</label><input type="date" id="f_d">
   <label>Tipo</label><input id="f_t" placeholder="Ex.: COLISÃO COM TERCEIRO">
   <label>Tipo em mandarim (opcional, se ficar vazio traduz sozinho)</label><input id="f_tz" placeholder="Ex.: 与第三方碰撞">
@@ -159,7 +162,10 @@ const SEED=[];
 const KEY="sinistros-v1";
 let S={date:new Date().toISOString().slice(0,10),items:SEED.map((x,i)=>({...x,id:i+1}))};
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
-let filter=null,editId=null,curRows=[];const F={op:"",de:"",ate:""};const exp=new Set();let lang="pt";try{lang=localStorage.getItem("sinistros-lang")||"pt"}catch(e){}if(lang==="both")lang="pt";let view="cards";try{view=localStorage.getItem("sinistros-view")||"cards"}catch(e){}
+let filter=null,editId=null,curRows=[];const F={op:"",de:"",ate:""};
+const API_URL="https://tiny-rice-f4bbsinistros.jtassistentetransporte.workers.dev";/* cole aqui a URL do Worker da Cloudflare para compartilhar; vazio = só neste navegador */
+let TOKEN="";try{TOKEN=localStorage.getItem("sinistros-token")||""}catch(e){}
+let isEd=!API_URL,sv=0,showCu=false,pt=null;const exp=new Set();let lang="pt";try{lang=localStorage.getItem("sinistros-lang")||"pt"}catch(e){}if(lang==="both")lang="pt";let view="cards";try{view=localStorage.getItem("sinistros-view")||"cards"}catch(e){}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const ZL=(pt,z)=>lang==="pt"?{main:pt,sub:""}:lang==="zh"?{main:z||pt,sub:""}:{main:pt,sub:z||""};
@@ -169,6 +175,8 @@ const obHtml=i=>{const m=ZL(i.o,oz(i));return `<div class="ob">${esc(m.main)}</d
 const H=[["Veículo","车辆"],["Data","事故日期"],["Tipo","类型"],["Situação","状态"],["Tratativa / Observações","处理情况 / 备注"],["Previsão","预计日期"]];
 const dshort=d=>d?d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(2,4):"—";
 const opb=(i,t="div")=>i.op==="sim"?`<${t} class="opb ok">${ZL("Operante","可运行").main}</${t}>`:i.op==="nao"?`<${t} class="opb no">${ZL("Parado","停运").main}</${t}>`:"";
+const cuTxt=i=>i.culpa==="ter"?ZL("Terceiros","第三方").main:i.culpa==="nos"?ZL("Nós (J&T)","我方").main:i.culpa==="out"?ZL("Outra","其他").main:"";
+const cuh=(i,t="div")=>showCu&&isEd&&i.culpa?`<${t} class="cu">${ZL("Culpa","责任方").main}: ${cuTxt(i)}</${t}>`:"";
 const fmt=d=>d.split("-").reverse().join("/");
 function prev(d){
   if(!d)return '<span style="color:var(--mut)">—</span>';
@@ -178,7 +186,7 @@ function prev(d){
   return `<div class="pv ${n<0?"late":""}">${fmt(d)}<small>${zt}</small></div>`;
 }
 const cat=id=>CATS.find(c=>c.id===id)||CATS[0];
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(API_URL&&isEd)pushSoon()}
 $("f_c").innerHTML=CATS.map(c=>`<option value="${c.id}">${c.n}</option>`).join("");
 $("dt").value=S.date;
 const tgl=()=>{$("f_cow").hidden=$("f_c").value!=="out"};$("f_c").onchange=tgl;
@@ -210,19 +218,19 @@ function render(){setTimeout(labelAll,0);setTimeout(autoTr,50);
   const q=$("q").value.toLowerCase();
   const rows=curRows=S.items.filter(i=>(filter==="__all"?true:filter?i.c===filter:(q||i.c!=="fin"))&&(!F.op||i.op===F.op)&&(!F.de||(i.d&&i.d>=F.de))&&(!F.ate||(i.d&&i.d<=F.ate))&&(!q||[i.v,i.t,i.s,i.co,i.o,i.e].join(" ").toLowerCase().includes(q)));
   $("tb").innerHTML=view!=="table"?"":rows.length?rows.map(i=>`<tr class="${exp.has(i.id)?"open":""}">
-    <td class="v">${esc(i.v)}${opb(i)}</td><td class="dt">${dshort(i.d)}</td><td class="t" title="${esc(i.t)}">${pair(i.t,tz(i))}</td>
+    <td class="v">${esc(i.v)}${opb(i)}${cuh(i)}</td><td class="dt">${dshort(i.d)}</td><td class="t" title="${esc(i.t)}">${pair(i.t,tz(i))}</td>
     <td class="s"><div class="sit"><i class="dot" style="background:${cat(i.c).c}"></i>${(m=>`<span title="${esc(m.main)}">${esc(m.main)}</span></div>${m.sub?`<div class="zh">${esc(m.sub)}</div>`:""}`)(ZL(sit(i),zh(i)))}</td>
     <td>${obHtml(i)}${i.e?`<div class="ex">${esc(i.e)}</div>`:""}</td>
     <td>${prev(i.p)}</td>
     <td class="act"><button data-x="${i.id}">${exp.has(i.id)?"Ver menos":"Ver mais"}</button> <button data-e="${i.id}">Editar</button> <button data-d="${i.id}">✕</button></td></tr>`).join(""):`<tr><td colspan="7" class="empty">${S.items.length?"Nenhum sinistro encontrado.":"Nenhum sinistro cadastrado. Clique em “+ Novo sinistro”."}</td></tr>`;
   $("hr").innerHTML=H.map(([a,b])=>{const m=ZL(a,b);return `<th>${esc(m.main)}${m.sub?`<span class="hz">${esc(m.sub)}</span>`:""}</th>`}).join("")+'<th class="act"></th>';
   document.querySelectorAll("[data-l]").forEach(b=>b.classList.toggle("on2",b.dataset.l===lang));
-  $("fc").value=filter||"";$("fn").textContent="Mostrando "+rows.length+" de "+S.items.length;$("xl").textContent="📊 Exportar Excel ("+rows.length+")";
+  document.body.classList.toggle("ro",!isEd);$("cu").hidden=!isEd;$("cu").textContent=showCu?"👁 Culpa: visível":"👁 Culpa: oculta";$("lg").textContent=isEd?"🔓 Sair do modo editor":"🔑 Entrar como editor";$("fc").value=filter||"";$("fn").textContent="Mostrando "+rows.length+" de "+S.items.length;$("xl").textContent="📊 Exportar Excel ("+rows.length+")";
   $("tw").hidden=view!=="table";$("cards").hidden=view!=="cards";
   $("vc").classList.toggle("on2",view==="cards");$("vt").classList.toggle("on2",view==="table");
   $("cards").innerHTML=view!=="cards"?"":rows.length?rows.map(i=>{const o=exp.has(i.id),z=zh(i),t2=tz(i),o2=oz(i),c=cat(i.c);
     return `<div class="card ${o?"open":""}" style="border-top-color:${c.c}">
-    <div class="ch"><div><b>${esc(i.v)}</b>${i.d?`<span class="dd">${dshort(i.d)}</span>`:""}${opb(i,"span")}</div><div class="cp">${prev(i.p)}</div></div>
+    <div class="ch"><div><b>${esc(i.v)}</b>${i.d?`<span class="dd">${dshort(i.d)}</span>`:""}${opb(i,"span")}${cuh(i,"span")}</div><div class="cp">${prev(i.p)}</div></div>
     <div class="ct">${pair(i.t,t2)}</div>
     <div class="cs"><i class="dot" style="background:${c.c}"></i>${(m=>`<span>${esc(m.main)}</span>${m.sub?`<span class="zh z0">· ${esc(m.sub)}</span>`:""}`)(ZL(sit(i),z))}</div>
     <div class="cb">${obHtml(i)}${i.e?`<div class="ex">${esc(i.e)}</div>`:""}</div>
@@ -234,14 +242,14 @@ function render(){setTimeout(labelAll,0);setTimeout(autoTr,50);
 function labelAll(){$("all").textContent=exp.size>=S.items.length?"Recolher tudo":"Expandir tudo"}
 function open(id){
   editId=id;const i=S.items.find(x=>x.id===id)||{v:"",d:new Date().toISOString().slice(0,10),t:"",c:"terc",s:"",o:"",e:""};
-  $("f_v").value=i.v;$("f_op").value=i.op||"";$("f_d").value=i.d||"";$("f_t").value=i.t;$("f_c").value=i.c;$("f_co").value=i.co||"";tgl();$("f_s").value=i.s;$("f_z").value=i.z||"";$("f_tz").value=i.tz||"";$("f_oz").value=i.oz||"";$("f_o").value=i.o;$("f_e").value=i.e;$("f_p").value=i.p||"";
+  $("f_v").value=i.v;$("f_op").value=i.op||"";$("f_cu").value=i.culpa||"";$("f_d").value=i.d||"";$("f_t").value=i.t;$("f_c").value=i.c;$("f_co").value=i.co||"";tgl();$("f_s").value=i.s;$("f_z").value=i.z||"";$("f_tz").value=i.tz||"";$("f_oz").value=i.oz||"";$("f_o").value=i.o;$("f_e").value=i.e;$("f_p").value=i.p||"";
   $("dlg").showModal();
 }
 $("add").onclick=()=>open(null);
 $("tr").onclick=()=>window.open("https://translate.google.com/?sl=pt&tl=zh-CN&op=translate&text="+encodeURIComponent($("f_o").value),"_blank","noopener");
 $("cx").onclick=()=>$("dlg").close();
 $("ok").onclick=()=>{
-  const d={v:$("f_v").value.trim().toUpperCase(),d:$("f_d").value,op:$("f_op").value,t:$("f_t").value.trim(),c:$("f_c").value,s:$("f_s").value.trim(),o:$("f_o").value.trim(),e:$("f_e").value.trim(),p:$("f_p").value,z:$("f_z").value.trim(),tz:$("f_tz").value.trim(),oz:$("f_oz").value.trim(),co:$("f_c").value==="out"?$("f_co").value.trim():""};
+  const d={v:$("f_v").value.trim().toUpperCase(),d:$("f_d").value,op:$("f_op").value,culpa:$("f_cu").value,t:$("f_t").value.trim(),c:$("f_c").value,s:$("f_s").value.trim(),o:$("f_o").value.trim(),e:$("f_e").value.trim(),p:$("f_p").value,z:$("f_z").value.trim(),tz:$("f_tz").value.trim(),oz:$("f_oz").value.trim(),co:$("f_c").value==="out"?$("f_co").value.trim():""};
   if(!d.v){$("f_v").focus();return}
   if(d.c==="out"&&!d.co){$("f_co").focus();return}
   if(d.c==="fin"&&!d.s)d.s="Finalizado";
@@ -263,8 +271,8 @@ $("xl").onclick=()=>{
   if(!curRows.length){alert("Nenhum sinistro para exportar com os filtros atuais.");return}
   const zhOn=lang==="zh";
   const ser=d=>d?Math.round((Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))-Date.UTC(1899,11,30))/864e5):null;
-  const head=["Placa","Veículo operante","Data do sinistro","Tipo","Categoria","Situação","Tratativa / Observações","Detalhes","Previsão"].concat(zhOn?["Tipo (中文)","Situação (中文)","Tratativa (中文)"]:[]);
-  const data=curRows.map(i=>[i.v,i.op==="sim"?"Operante":i.op==="nao"?"Parado":"",ser(i.d),i.t,cat(i.c).n+(i.c==="out"&&i.co?": "+i.co:""),sit(i),i.o,i.e||"",ser(i.p)].concat(zhOn?[tz(i),zh(i),oz(i)]:[]));
+  const head=["Placa","Veículo operante","Data do sinistro","Tipo","Categoria","Situação","Tratativa / Observações","Detalhes","Previsão"].concat(showCu&&isEd?["Culpa"]:[]).concat(zhOn?["Tipo (中文)","Situação (中文)","Tratativa (中文)"]:[]);
+  const data=curRows.map(i=>[i.v,i.op==="sim"?"Operante":i.op==="nao"?"Parado":"",ser(i.d),i.t,cat(i.c).n+(i.c==="out"&&i.co?": "+i.co:""),sit(i),i.o,i.e||"",ser(i.p)].concat(showCu&&isEd?[cuTxt(i)]:[]).concat(zhOn?[tz(i),zh(i),oz(i)]:[]));
   const ws=XLSX.utils.aoa_to_sheet([head,...data]);
   data.forEach((_,r)=>[2,8].forEach(c=>{const a=XLSX.utils.encode_cell({r:r+1,c});if(ws[a]){ws[a].t="n";ws[a].z="dd/mm/yyyy"}}));
   ws["!cols"]=[10,14,14,30,28,22,60,36,12,28,22,50].slice(0,head.length).map(w=>({wch:w}));
@@ -332,7 +340,38 @@ $("bkb").onclick=()=>{const d=new Date().toISOString().slice(0,10),a=document.cr
   a.download="sinistros-backup-"+d+".json";document.body.appendChild(a);a.click();a.remove();
   try{localStorage.setItem(LB,d)}catch(e){}bkNote()};
 bkNote();
+const hdr=()=>TOKEN?{Authorization:"Bearer "+TOKEN}:{};
+function keepTr(old,neu){const m=Object.fromEntries(old.map(x=>[x.id,x]));neu.forEach(n=>{const o=m[n.id];if(!o)return;if(o.tzs===n.t&&!n.tza){n.tzs=o.tzs;n.tza=o.tza}if(o.ozs===n.o&&!n.oza){n.ozs=o.ozs;n.oza=o.oza}})}
+async function pull(first){
+  if(!API_URL||$("dlg").open)return;
+  try{
+    const r=await fetch(API_URL,{headers:hdr(),cache:"no-store"}),j=await r.json();
+    isEd=!!j.editor;
+    if(first&&isEd&&j.v===0&&!j.items.length&&S.items.length&&confirm("O servidor está vazio. Enviar os "+S.items.length+" sinistros deste navegador para ele?")){await push();render();return}
+    if(j.v!==sv||first){keepTr(S.items,j.items);S.items=j.items;S.date=j.date||S.date;sv=j.v;$("dt").value=S.date;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+    $("sync").textContent="";render();
+  }catch(e){$("sync").textContent="Sem conexão com o servidor"}
+}
+async function push(){
+  try{
+    const r=await fetch(API_URL,{method:"PUT",headers:{...hdr(),"Content-Type":"application/json"},body:JSON.stringify({base:sv,date:S.date,items:S.items})}),j=await r.json();
+    if(r.status===409){alert("Outra pessoa salvou antes de você. Os dados foram atualizados; refaça a alteração.");await pull(true);return}
+    if(!r.ok)throw 0;
+    sv=j.v;$("sync").textContent="";
+  }catch(e){$("sync").textContent="Não foi possível salvar no servidor"}
+}
+function pushSoon(){clearTimeout(pt);pt=setTimeout(push,500)}
+$("cu").onclick=()=>{showCu=!showCu;render()};
+$("lg").hidden=!API_URL;
+$("lg").onclick=async()=>{
+  const out=()=>{TOKEN="";try{localStorage.removeItem("sinistros-token")}catch(e){}};
+  if(isEd){out();await pull(true);return}
+  const t=prompt("Senha de editor:");if(!t)return;
+  TOKEN=t.trim();try{localStorage.setItem("sinistros-token",TOKEN)}catch(e){}
+  await pull(true);if(!isEd){out();alert("Senha incorreta.")}
+};
 render();labelAll();
+if(API_URL){pull(true);setInterval(()=>pull(false),30000)}
 </script>
 </body>
 </html>
